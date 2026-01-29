@@ -1,0 +1,79 @@
+name: Deploy to AWS
+
+on:
+  push:
+    branches:
+      - main  # mainブランチにプッシュされたら実行
+  workflow_dispatch: # 手動実行ボタンも有効化
+
+env:
+  AWS_REGION: ap-northeast-1
+  ECR_REPOSITORY: portfolio-app
+  ECS_SERVICE: portfolio-app-service
+  ECS_CLUSTER: portfolio-cluster
+  ECS_TASK_DEFINITION: portfolio-app-task
+  CONTAINER_NAME: app
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    # Terraformのセットアップと適用
+    # ※AWS制限解除までは、このステップは失敗する可能性がありますが、記述しておきます
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v3
+
+    - name: Terraform Init
+      run: terraform init
+
+    # ロックファイルの問題を避けるため、CI上では再構築を許可する設定を入れる
+    - name: Terraform Apply
+      run: terraform apply -auto-approve
+      continue-on-error: true # AWS制限解除待ちのため、一旦エラーでも止まらないようにしておく
+
+    # DockerイメージのビルドとPush
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # appディレクトリに移動してビルド
+        cd app
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+    # ECSのタスク定義を更新してデプロイ
+    # ※ここもAWSリソースがないとエラーになります
+    - name: Fill in the new image ID in the Amazon ECS task definition
+      id: task-def
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: aws-ecs-task-definition.json # ※後で取得する設定が必要
+        container-name: ${{ env.CONTAINER_NAME }}
+        image: ${{ steps.build-image.outputs.image }}
+
+    - name: Deploy Amazon ECS task definition
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.task-def.outputs.task-definition }}
+        service: ${{ env.ECS_SERVICE }}
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true

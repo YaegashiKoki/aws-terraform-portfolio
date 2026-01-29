@@ -48,7 +48,7 @@ resource "aws_subnet" "private_1c" {
 # ECSがDockerイメージをプルしたり、外へ通信する際に必要になります
 # =========================================================
 
-/*
+
 # NAT Gateway用の固定IP (EIP)
 resource "aws_eip" "nat_1a" {
   domain = "vpc"
@@ -66,7 +66,7 @@ resource "aws_nat_gateway" "nat_1a" {
   # IGWが先にできていないとエラーになるため依存関係を指定
   depends_on = [aws_internet_gateway.igw]
 }
-*/
+
 
 # --- Route Table (Public) ---
 resource "aws_route_table" "public" {
@@ -96,12 +96,12 @@ resource "aws_route_table" "private_1a" {
   vpc_id = aws_vpc.main.id
 
   # ★ NAT Gatewayへのルート (コメントアウト中)
-  /*
+  
   route {
     cidr_block     = "0.0.0.0/0"
     nat_gateway_id = aws_nat_gateway.nat_1a.id
   }
-  */
+  
 
   tags = { Name = "portfolio-private-rt-1a" }
 }
