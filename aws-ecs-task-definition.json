@@ -18,7 +18,7 @@
         "volumesFrom": []
       }
     ],
-    "executionRoleArn": "arn:aws:iam::123456789012:role/portfolio-ecs-task-execution-role",
+    "executionRoleArn": "arn:aws:iam::634220481756:role/portfolio-ecs-task-execution-role",
     "networkMode": "awsvpc",
     "requiresCompatibilities": [
       "FARGATE"
