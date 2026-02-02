@@ -41,7 +41,6 @@ jobs:
     # ロックファイルの問題を避けるため、CI上では再構築を許可する設定を入れる
     - name: Terraform Apply
       run: terraform apply -auto-approve
-      continue-on-error: true # AWS制限解除待ちのため、一旦エラーでも止まらないようにしておく
 
     # DockerイメージのビルドとPush
     - name: Login to Amazon ECR
