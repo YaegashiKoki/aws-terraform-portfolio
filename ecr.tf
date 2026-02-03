@@ -9,5 +9,11 @@ resource "aws_ecr_repository" "app" {
     scan_on_push = true
   }
 
+    # ★ここを追加！ (KMSによる暗号化)
+  encryption_configuration {
+    encryption_type = "KMS"
+    kms_key         = aws_kms_alias.app.arn
+  }
+
   tags = { Name = "portfolio-app-repo" }
 }
