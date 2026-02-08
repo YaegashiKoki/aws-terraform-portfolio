@@ -44,7 +44,7 @@ resource "aws_subnet" "private_1c" {
 }
 
 # =========================================================
-# ★ NAT Gateway 設定 (コスト削減のため初期はコメントアウト)
+# ★ NAT Gateway 設定
 # ECSがDockerイメージをプルしたり、外へ通信する際に必要になります
 # =========================================================
 
@@ -56,7 +56,6 @@ resource "aws_eip" "nat_1a" {
 }
 
 # NAT Gateway 本体 (パブリックサブネットに配置)
-# ※ これが作成されると時間課金が始まります
 resource "aws_nat_gateway" "nat_1a" {
   allocation_id = aws_eip.nat_1a.id
   subnet_id     = aws_subnet.public_1a.id
@@ -94,8 +93,6 @@ resource "aws_route_table_association" "public_1c" {
 # --- Route Table (Private) ---
 resource "aws_route_table" "private_1a" {
   vpc_id = aws_vpc.main.id
-
-  # ★ NAT Gatewayへのルート (コメントアウト中)
   
   route {
     cidr_block     = "0.0.0.0/0"
