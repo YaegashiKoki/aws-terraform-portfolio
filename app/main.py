@@ -17,12 +17,12 @@ def hello():
             <style>
                 body {{ font-family: sans-serif; text-align: center; padding-top: 50px; background-color: #f0f2f5; }}
                 .container {{ background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); display: inline-block; }}
-                h1 {{ color: #007bff; }}
+                h1 {{ color: #ff9900; }}
             </style>
         </head>
         <body>
             <div class="container">
-                <h1>Hello, Cloud Engineer!</h1>
+                <h1>Hello, Cloud Engineer! (v1.1)</h1>
                 <p>Current Time: <b>{now}</b></p>
                 <p>Container ID: {host_name}</p>
                 <p>Status: <span style="color:green; font-weight:bold;">Running on ECS Fargate</span></p>
