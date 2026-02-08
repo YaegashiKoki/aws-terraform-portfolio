@@ -3,8 +3,11 @@ name: Deploy to AWS
 on:
   push:
     branches:
-      - main  # mainブランチにプッシュされたら実行
-  workflow_dispatch: # 手動実行ボタンも有効化
+      - main
+  pull_request:    # ← 追加：PRを作ったときも動くようにする
+    branches:
+      - main
+  workflow_dispatch:
 
 env:
   AWS_REGION: ap-northeast-1
@@ -23,6 +26,7 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
+    # AWS認証（これはPRのときも実行してOK。認証できるかチェックになるため）
     - name: Configure AWS credentials
       uses: aws-actions/configure-aws-credentials@v4
       with:
@@ -30,46 +34,54 @@ jobs:
         aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
         aws-region: ${{ env.AWS_REGION }}
 
-    # Terraformのセットアップと適用
-    # ※AWS制限解除までは、このステップは失敗する可能性がありますが、記述しておきます
     - name: Setup Terraform
       uses: hashicorp/setup-terraform@v3
 
+    # Initは構文チェックも兼ねるのでPRでも実行する
     - name: Terraform Init
       run: terraform init
 
-    # ロックファイルの問題を避けるため、CI上では再構築を許可する設定を入れる
+    # Applyは本番環境を変えてしまうので、Push（マージ後）のみ実行！
     - name: Terraform Apply
+      if: github.event_name == 'push'  # ← ここ重要
       run: terraform apply -auto-approve
 
-    # DockerイメージのビルドとPush
     - name: Login to Amazon ECR
       id: login-ecr
       uses: aws-actions/amazon-ecr-login@v2
 
-    - name: Build, tag, and push image to Amazon ECR
-      id: build-image
+    # DockerビルドまではPRでもやる（ビルドエラーがないか確認するため）
+    # ただし Push はしないようにコマンドを分ける
+    - name: Build Docker Image
       env:
         ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         IMAGE_TAG: ${{ github.sha }}
       run: |
-        # appディレクトリに移動してビルド
         cd app
         docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+
+    # ECRへのプッシュは本番用なので、Push（マージ後）のみ実行！
+    - name: Push Docker Image to ECR
+      if: github.event_name == 'push'  # ← ここ重要
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
         echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
 
-    # ECSのタスク定義を更新してデプロイ
-    # ※ここもAWSリソースがないとエラーになります
+    # ECSの更新も、Push（マージ後）のみ実行！
     - name: Fill in the new image ID in the Amazon ECS task definition
+      if: github.event_name == 'push'  # ← ここ重要
       id: task-def
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
-        task-definition: aws-ecs-task-definition.json # ※後で取得する設定が必要
+        task-definition: aws-ecs-task-definition.json
         container-name: ${{ env.CONTAINER_NAME }}
-        image: ${{ steps.build-image.outputs.image }}
+        image: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
 
     - name: Deploy Amazon ECS task definition
+      if: github.event_name == 'push'  # ← ここ重要
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.task-def.outputs.task-definition }}
