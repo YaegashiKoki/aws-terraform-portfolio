@@ -26,6 +26,10 @@ def hello():
                 <p>Current Time: <b>{now}</b></p>
                 <p>Container ID: {host_name}</p>
                 <p>Status: <span style="color:green; font-weight:bold;">Running on ECS Fargate</span></p>
+                <hr>
+                <footer>
+                    Version: 1.0.2 (CI/CD Check: PR vs Merge)
+                </footer>
             </div>
         </body>
     </html>
