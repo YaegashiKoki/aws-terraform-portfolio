@@ -3,3 +3,7 @@
 *.tfstate.backup
 *.csv
 .DS_Store
+lambda_function_payload.zip
+lambda/src/*
+!lambda/src/index.py
+!lambda/src/faq.json
