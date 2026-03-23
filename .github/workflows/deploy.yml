@@ -39,8 +39,8 @@ jobs:
     
     # ★ここから追加: Terraform実行前にLambdaのライブラリをダウンロードさせる
     - name: Install Lambda Dependencies
-        run: |
-          pip install -r lambda/requirements.txt --platform manylinux2014_x86_64 --target=lambda/src --implementation cp --python-version 3.11 --only-binary=:all: --upgrade
+      run: |
+        pip install -r lambda/requirements.txt --platform manylinux2014_x86_64 --target=lambda/src --implementation cp --python-version 3.11 --only-binary=:all: --upgrade
     # ★ここまで追加
 
     # Initは構文チェックも兼ねるのでPRでも実行する
